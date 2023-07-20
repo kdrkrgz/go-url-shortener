@@ -1,0 +1,11 @@
+Environment: development
+AppPort: 8000
+
+DbUri: mongodb://localhost
+DbPort: 27017
+DbName: UrlShortener
+CollectionName: Urls
+
+
+UrlExpirationTime: 24 # in hours
+
