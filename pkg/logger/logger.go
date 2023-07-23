@@ -3,6 +3,7 @@ package logger
 import (
 	"log"
 
+	c "github.com/kdrkrgz/go-url-shortener/conf"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -14,9 +15,9 @@ func init() {
 	conf := zap.NewProductionConfig()
 	conf.OutputPaths = []string{"stdout"}
 	conf.Level.SetLevel(zap.InfoLevel)
-	// if c.Get("Environment") == "development" {
-	// 	conf.Level.SetLevel(zap.DebugLevel)
-	// }
+	if c.Get("App.Environment") == "development" {
+		conf.Level.SetLevel(zap.DebugLevel)
+	}
 	conf.Level.SetLevel(zap.DebugLevel)
 	conf.EncoderConfig.TimeKey = "timestamp"
 	conf.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
@@ -25,7 +26,7 @@ func init() {
 	if err != nil {
 		log.Fatalf("Error initializing logger: %s", err)
 	}
-	logger = zapLogger.With(zap.String("service", "socialize"))
+	logger = zapLogger.With(zap.String("service", "go-url-shortener"))
 }
 
 func Logger() *zap.Logger {

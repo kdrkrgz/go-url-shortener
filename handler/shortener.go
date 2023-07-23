@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kdrkrgz/go-url-shortener/conf"
 	"github.com/kdrkrgz/go-url-shortener/repository"
 	"github.com/kdrkrgz/go-url-shortener/resolver"
 	"github.com/kdrkrgz/go-url-shortener/shortener"
@@ -11,53 +13,40 @@ import (
 
 // Shortener godoc
 //
-//	@Summary	Shortener
-//	@Tags		Shortener
-//	@Produce	json
-//
-// @Success	200		{object}	string
-// @Router		/shortener/ [POST]
-func Shortener(repo *repository.Repository) fiber.Handler {
+//	@Router		/shortener/ [POST]
+func ShortenerHandler(repo *repository.Repository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// TODO: Move to Service
 		// target url
 		var payload *shortener.Request
-		var shorted resolver.Shorten
+		var shorted resolver.ShortUrl
 		if err := c.BodyParser(&payload); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"message": "Bad Request",
 			})
 		}
 		// check if target url is already shorted
-		shorted, err := repo.FindShortedUrl(payload.TargetUrl)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"message": "Bad Request",
+		shortedUrl, _ := repo.FindUrl("target_url", payload.TargetUrl)
+		if shortedUrl != nil {
+			return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+				"shorted_url": fmt.Sprintf("%s/%s", conf.Get("App.Domain"), *shortedUrl),
 			})
 		}
-		if shorted.TargetUrl == payload.TargetUrl {
-			return c.Status(fiber.StatusOK).JSON(fiber.Map{
-				"shorted_url": shorted.ShortUrl,
-			})
-		}
-		// exp_duration := conf.Get("ExpirationDate")
 		// create shorten object
-
-		shorted = resolver.Shorten{
+		shorted = resolver.ShortUrl{
 			TargetUrl:      payload.TargetUrl,
-			ShortUrl:       shortener.GenerateShortUrl(payload.TargetUrl),
+			ShortUrl:       shortener.GenerateShortUrl(),
 			ExpirationDate: time.Now().Add(time.Duration(time.Hour * 24)),
 			CreatedAt:      time.Now(),
 		}
 		// insert to db
-		_, err = repo.InsertShortedUrl(shorted)
-		if err != nil {
+		_, errInsert := repo.InsertShortedUrl(shorted)
+		if errInsert != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": "Something went wrong!",
 			})
 		}
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"shorted_url": shorted.ShortUrl,
+		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+			"shorted_url": fmt.Sprintf("%s/%s", conf.Get("App.Domain"), shorted.ShortUrl),
 		})
 	}
 }

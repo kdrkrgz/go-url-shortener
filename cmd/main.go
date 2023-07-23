@@ -12,25 +12,33 @@ import (
 	conf "github.com/kdrkrgz/go-url-shortener/conf"
 	handler "github.com/kdrkrgz/go-url-shortener/handler"
 	log "github.com/kdrkrgz/go-url-shortener/pkg/logger"
+	tasks "github.com/kdrkrgz/go-url-shortener/pkg/tasks"
 	"github.com/kdrkrgz/go-url-shortener/repository"
 )
 
 type Application struct {
-	app        *fiber.App
-	collection *repository.Repository
+	app  *fiber.App
+	repo *repository.Repository
 }
 
 func (a *Application) Register() {
 	a.app.Get("/", handler.RedirectSwagger)
 	a.app.Get("/healthcheck", handler.HealthCheck)
-	a.app.Post("/shorten", handler.Shortener(a.collection))
-	// a.app.Get("/resolver", handler.Redirect(a.collection))
+	a.app.Post("/shorten", handler.ShortenerHandler(a.repo))
+	a.app.Get("/:short_url", handler.ResolverHandler(a.repo))
 	route := a.app.Group("/swagger")
 	route.Get("*", swagger.HandlerDefault)
 }
 
+// @title						GoUrlShortener API
+// @version					    1.0
+// @description				    Swagger for GoUrlShortener app
+// @host						localhost:8000
+// @BasePath					/
+// @schemes					    http
+// @license.name				Apache License, Version 2.0 (the "License")
 func main() {
-	collection := repository.New()
+	repo := repository.New()
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     "http://localhost:8000",
@@ -38,8 +46,10 @@ func main() {
 		AllowMethods:     "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS",
 		AllowCredentials: true,
 	}))
-	application := &Application{app: app, collection: collection}
+	// app.Use(limiter.New(limiter.Config{Max: 2, Expiration: 1 * time.Minute}))
+	application := &Application{app: app, repo: repo}
 	application.Register()
+	tasks.RunTasks()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT)
@@ -51,7 +61,7 @@ func main() {
 		_ = app.Shutdown()
 	}()
 
-	if err := app.Listen(fmt.Sprintf(":%v", conf.Get("AppPort"))); err != nil {
+	if err := app.Listen(fmt.Sprintf(":%v", conf.Get("App.AppPort"))); err != nil {
 		log.Logger().Panic(fmt.Sprintf("App Err: %s", err))
 	}
 }

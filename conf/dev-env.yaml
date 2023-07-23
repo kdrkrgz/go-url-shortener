@@ -1,11 +1,26 @@
-Environment: development
-AppPort: 8000
 
-DbUri: mongodb://localhost
-DbPort: 27017
-DbName: UrlShortener
-CollectionName: Urls
+App:
+  Environment: development
+  AppPort: 8000
+  Domain: http://localhost:8000
+  UrlExpirationTime: 1440 # 1 day in minutes
+  CacheUrlExpiration: 60 # in minutes
+  ShortUrlMinLen: 4
+  ShortUrlMaxLen: 8
+
+Tasks:
+  ExpiredUrlsDeleteHour: 12:12 # delete at midnight
+
+MongoDb:
+  DbUri: mongodb://localhost
+  DbPort: 27017
+  DbName: UrlShortener
+  CollectionName: Urls
+
+Redis:
+  Host: localhost
+  Port: 6379
+  Db: 0
 
 
-UrlExpirationTime: 24 # in hours
 

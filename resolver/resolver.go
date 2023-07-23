@@ -7,7 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type Shorten struct {
+type ShortUrl struct {
 	ID             primitive.ObjectID `bson:"_id,omitempty"`
 	ExpirationDate time.Time          `json:"expiration_date,omitempty"`
 	TargetUrl      string             `bson:"target_url,omitempty"`

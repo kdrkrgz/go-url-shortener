@@ -3,8 +3,12 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"time"
 
+	"github.com/go-redis/redis"
 	"github.com/kdrkrgz/go-url-shortener/conf"
+	log "github.com/kdrkrgz/go-url-shortener/pkg/logger"
 	resolver "github.com/kdrkrgz/go-url-shortener/resolver"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -13,12 +17,22 @@ import (
 
 type Repository struct {
 	UrlCollection *mongo.Collection
+	RedisCache    *redis.Client
 }
 
 func New() *Repository {
-	return &Repository{
-		UrlCollection: getUrlCollection(conf.Get("DbName"), conf.Get("CollectionName")),
+	col := &Repository{
+		UrlCollection: getUrlCollection(conf.Get("MongoDb.DbName"), conf.Get("MongoDb.CollectionName")),
+		RedisCache:    getUrlCache(conf.Get("Redis.Host"), conf.Get("Redis.Port")),
 	}
+	// create unique index for shorted url
+	col.UrlCollection.Indexes().CreateOne(context.Background(), mongo.IndexModel{
+		Keys: bson.M{
+			"short_url": 1,
+		},
+		Options: options.Index().SetUnique(true),
+	})
+	return col
 }
 
 // CollectionApi api a collection api interface
@@ -33,7 +47,7 @@ type CollectionApi interface {
 
 func getUrlCollection(db, collection string) *mongo.Collection {
 	fmt.Println("Connecting to MongoDB...")
-	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(fmt.Sprintf("%s:%s", conf.Get("DbUri"), conf.Get("DbPort"))))
+	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(fmt.Sprintf("%s:%s", conf.Get("MongoDb.DbUri"), conf.Get("MongoDb.DbPort"))))
 	if err != nil {
 		panic(err)
 	}
@@ -41,31 +55,88 @@ func getUrlCollection(db, collection string) *mongo.Collection {
 	return client.Database(db).Collection(collection)
 }
 
-// Get Shorted Url
-func (repo *Repository) FindShortedUrl(targetUrl string) (resolver.Shorten, error) {
-	var shortedUrl resolver.Shorten
-	ctx := context.Background()
-	cur := repo.UrlCollection.FindOne(ctx, bson.M{"target_url": targetUrl})
-	print(cur)
-	if err := cur.Decode(&shortedUrl); err != nil {
-		fmt.Printf("Shorted Url Not Found - Error: %v \n", err)
-	}
+func getUrlCache(host, port string) *redis.Client {
+	fmt.Println("Connecting to Redis...")
+	client := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", host, port),
+		Password: conf.Get("Redis.Password"),
+		DB:       0,
+	})
+	fmt.Println("Connection Success!")
+	return client
+}
 
-	return shortedUrl, nil
+func (repo *Repository) FindUrl(field, url string) (*string, error) {
+	resFromCache, err := repo.FindUrlFromCache(url)
+	if err != nil {
+		log.Logger().Sugar().Infof("Url Not Found on Cache - Url: %s", url)
+	}
+	if resFromCache != nil {
+		return resFromCache, nil
+	}
+	resFromDb, err := repo.FindUrlFromDb(field, url)
+	if err != nil {
+		return nil, err
+	}
+	return &resFromDb.TargetUrl, nil
+}
+
+// Get Shorted or Target Url From Db
+func (repo *Repository) FindUrlFromDb(field, url string) (*resolver.ShortUrl, error) {
+	var shortUrl = new(resolver.ShortUrl)
+	ctx := context.Background()
+
+	cur := repo.UrlCollection.FindOne(ctx, bson.M{field: url})
+
+	if err := cur.Decode(&shortUrl); err != nil {
+		return nil, err
+	}
+	if err := repo.setUrlToRedis(shortUrl.ShortUrl, shortUrl.TargetUrl); err != nil {
+		log.Logger().Sugar().Errorf("An error occured insert url to redis - Error: %v", err)
+	}
+	return shortUrl, nil
 }
 
 // Insert Shorted Url
-func (repo *Repository) InsertShortedUrl(shortedUrl resolver.Shorten) (*mongo.InsertOneResult, error) {
+func (repo *Repository) InsertShortedUrl(shortedUrl resolver.ShortUrl) (*mongo.InsertOneResult, error) {
 	res, err := repo.UrlCollection.InsertOne(context.Background(), shortedUrl)
 	if err != nil {
-		panic(err)
+		log.Logger().Sugar().Errorf("An error occured insert url to db - Error: %v", err)
+		return nil, err
 	}
+	if err := repo.setUrlToRedis(shortedUrl.TargetUrl, shortedUrl.ShortUrl); err != nil {
+		log.Logger().Sugar().Errorf("An error occured insert url to redis - Error: %v", err)
+		return nil, err
+	}
+
 	return res, nil
 }
 
-// Delete Shorted Url
-func (repo *Repository) DeleteShortedUrl(collection CollectionApi, shortedUrl resolver.Shorten) (*mongo.DeleteResult, error) {
-	res, err := collection.DeleteOne(context.Background(), bson.M{"short_url": shortedUrl.ShortUrl})
+// Get Shorted or Target Url From Cache
+func (repo *Repository) FindUrlFromCache(url string) (*string, error) {
+	cur, err := repo.RedisCache.Get(url).Bytes()
+	if err != nil {
+		return nil, err
+	}
+	res := string(cur)
+	return &res, nil
+}
+
+func (repo *Repository) setUrlToRedis(key, val string) error {
+	cacheUrlExpiration, err := strconv.Atoi(conf.Get("App.CacheUrlExpiration"))
+	if err != nil {
+		return err
+	}
+	repo.RedisCache.Set(key, val, time.Duration(cacheUrlExpiration)*time.Minute)
+	return nil
+}
+
+// Delete Shorted Urls With Given Duration
+func (repo *Repository) DeleteShortedUrlsByDate() (*mongo.DeleteResult, error) {
+	expireTime, _ := strconv.Atoi(conf.Get("App.UrlExpirationTime"))
+	minutesAgo := time.Now().UTC().Add(-time.Duration(expireTime) * time.Minute)
+	fmt.Printf("Time Now: %v\n", time.Now())
+	res, err := repo.UrlCollection.DeleteMany(context.Background(), bson.M{"created_at": bson.M{"$lte": minutesAgo}})
 	if err != nil {
 		return nil, err
 	}
