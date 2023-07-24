@@ -27,10 +27,12 @@ func ShortenerHandler(repo *repository.Repository) fiber.Handler {
 		// check if target url is already shorted
 		shortedUrl, _ := repo.FindUrl("target_url", payload.TargetUrl)
 		if shortedUrl != nil {
-			return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-				"shorted_url": fmt.Sprintf("%s/%s", conf.Get("App.Domain"), *shortedUrl),
+			return c.Status(fiber.StatusCreated).JSON(&shortener.Response{
+				ShortUrl: *shortedUrl,
+				QrCode:   shortener.GenerateQrCode(fmt.Sprintf("%s/%s", conf.Get("App.Domain"), *shortedUrl)),
 			})
 		}
+
 		// create shorten object
 		shorted = resolver.ShortUrl{
 			TargetUrl:      payload.TargetUrl,
@@ -45,8 +47,11 @@ func ShortenerHandler(repo *repository.Repository) fiber.Handler {
 				"message": "Something went wrong!",
 			})
 		}
-		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-			"shorted_url": fmt.Sprintf("%s/%s", conf.Get("App.Domain"), shorted.ShortUrl),
-		})
+
+		return c.Status(fiber.StatusCreated).JSON(
+			&shortener.Response{
+				shorted.ShortUrl,
+				shortener.GenerateQrCode(fmt.Sprintf("%s/%s", conf.Get("App.Domain"), shorted.ShortUrl)),
+			})
 	}
 }

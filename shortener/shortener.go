@@ -6,10 +6,17 @@ import (
 	"time"
 
 	"github.com/kdrkrgz/go-url-shortener/conf"
+	log "github.com/kdrkrgz/go-url-shortener/pkg/logger"
+	"github.com/skip2/go-qrcode"
 )
 
 type Request struct {
 	TargetUrl string `json:"target_url"`
+}
+
+type Response struct {
+	ShortUrl string `json:"short_url"`
+	QrCode   []byte `json:"qr_code"`
 }
 
 var shortUrlMinLen = conf.Get("App.ShortUrlMinLen")
@@ -42,4 +49,13 @@ func GenerateShortUrl() string {
 		b[i] = charset[seededRand.Intn(len(charset))]
 	}
 	return string(b)
+}
+
+func GenerateQrCode(target_url string) []byte {
+	var png []byte
+	png, err := qrcode.Encode(target_url, qrcode.Medium, 256)
+	if err != nil {
+		log.Logger().Error("Qr Generation Failed!")
+	}
+	return png
 }
