@@ -15,7 +15,7 @@ func init() {
 	conf := zap.NewProductionConfig()
 	conf.OutputPaths = []string{"stdout"}
 	conf.Level.SetLevel(zap.InfoLevel)
-	if os.Getenv("App.Environment") == "development" {
+	if os.Getenv("Environment") == "development" {
 		conf.Level.SetLevel(zap.DebugLevel)
 	}
 	conf.Level.SetLevel(zap.DebugLevel)
