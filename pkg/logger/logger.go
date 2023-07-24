@@ -2,8 +2,8 @@ package logger
 
 import (
 	"log"
+	"os"
 
-	c "github.com/kdrkrgz/go-url-shortener/conf"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -15,7 +15,7 @@ func init() {
 	conf := zap.NewProductionConfig()
 	conf.OutputPaths = []string{"stdout"}
 	conf.Level.SetLevel(zap.InfoLevel)
-	if c.Get("App.Environment") == "development" {
+	if os.Getenv("App.Environment") == "development" {
 		conf.Level.SetLevel(zap.DebugLevel)
 	}
 	conf.Level.SetLevel(zap.DebugLevel)

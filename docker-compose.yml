@@ -2,8 +2,7 @@ version: '3.9'
 
 services:
   api:
-    image: kdrkrgz/go-url-shortener:latest
-    build: .
+    image: kdrkrgz/go-url-shortener:1.0.0
     environment:
       AppPort: 8080
       Domain: http://localhost:8080
