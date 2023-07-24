@@ -3,11 +3,11 @@ package repository
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"time"
 
 	"github.com/go-redis/redis"
-	"github.com/kdrkrgz/go-url-shortener/conf"
 	log "github.com/kdrkrgz/go-url-shortener/pkg/logger"
 	resolver "github.com/kdrkrgz/go-url-shortener/resolver"
 	"go.mongodb.org/mongo-driver/bson"
@@ -22,8 +22,8 @@ type Repository struct {
 
 func New() *Repository {
 	col := &Repository{
-		UrlCollection: getUrlCollection(conf.Get("MongoDb.DbName"), conf.Get("MongoDb.CollectionName")),
-		RedisCache:    getUrlCache(conf.Get("Redis.Host"), conf.Get("Redis.Port")),
+		UrlCollection: getUrlCollection(os.Getenv("DbName"), os.Getenv("CollectionName")),
+		RedisCache:    getUrlCache(os.Getenv("RedisHost"), os.Getenv("RedisPort")),
 	}
 	// create unique index for shorted url
 	col.UrlCollection.Indexes().CreateOne(context.Background(), mongo.IndexModel{
@@ -47,7 +47,7 @@ type CollectionApi interface {
 
 func getUrlCollection(db, collection string) *mongo.Collection {
 	fmt.Println("Connecting to MongoDB...")
-	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(fmt.Sprintf("%s:%s", conf.Get("MongoDb.DbUri"), conf.Get("MongoDb.DbPort"))))
+	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(fmt.Sprintf("%s:%s", os.Getenv("DbUri"), os.Getenv("DbPort"))))
 	if err != nil {
 		panic(err)
 	}
@@ -59,7 +59,7 @@ func getUrlCache(host, port string) *redis.Client {
 	fmt.Println("Connecting to Redis...")
 	client := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", host, port),
-		Password: conf.Get("Redis.Password"),
+		Password: os.Getenv("RedisPassword"),
 		DB:       0,
 	})
 	fmt.Println("Connection Success!")
@@ -123,7 +123,7 @@ func (repo *Repository) FindUrlFromCache(url string) (*string, error) {
 }
 
 func (repo *Repository) setUrlToRedis(key, val string) error {
-	cacheUrlExpiration, err := strconv.Atoi(conf.Get("App.CacheUrlExpiration"))
+	cacheUrlExpiration, err := strconv.Atoi(os.Getenv("CacheUrlExpiration"))
 	if err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ func (repo *Repository) setUrlToRedis(key, val string) error {
 
 // Delete Shorted Urls With Given Duration
 func (repo *Repository) DeleteShortedUrlsByDate() (*mongo.DeleteResult, error) {
-	expireTime, _ := strconv.Atoi(conf.Get("App.UrlExpirationTime"))
+	expireTime, _ := strconv.Atoi(os.Getenv("UrlExpirationTime"))
 	minutesAgo := time.Now().UTC().Add(-time.Duration(expireTime) * time.Minute)
 	fmt.Printf("Time Now: %v\n", time.Now())
 	res, err := repo.UrlCollection.DeleteMany(context.Background(), bson.M{"created_at": bson.M{"$lte": minutesAgo}})

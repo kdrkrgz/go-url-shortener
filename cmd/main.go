@@ -9,7 +9,6 @@ import (
 	swagger "github.com/arsmn/fiber-swagger/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	conf "github.com/kdrkrgz/go-url-shortener/conf"
 	handler "github.com/kdrkrgz/go-url-shortener/handler"
 	log "github.com/kdrkrgz/go-url-shortener/pkg/logger"
 	tasks "github.com/kdrkrgz/go-url-shortener/pkg/tasks"
@@ -61,7 +60,7 @@ func main() {
 		_ = app.Shutdown()
 	}()
 
-	if err := app.Listen(fmt.Sprintf(":%v", conf.Get("App.AppPort"))); err != nil {
+	if err := app.Listen(fmt.Sprintf(":%v", os.Getenv("AppPort"))); err != nil {
 		log.Logger().Panic(fmt.Sprintf("App Err: %s", err))
 	}
 }

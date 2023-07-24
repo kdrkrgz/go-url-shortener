@@ -18,9 +18,9 @@ MongoDb:
   CollectionName: Urls
 
 Redis:
-  Host: localhost
-  Port: 6379
-  Db: 0
+  RedisHost: localhost
+  RedisPort: 6379
+  RedisDb: 0
 
 
 

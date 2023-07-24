@@ -1,16 +1,16 @@
 package pkg
 
 import (
+	"os"
 	"time"
 
 	"github.com/go-co-op/gocron"
-	"github.com/kdrkrgz/go-url-shortener/conf"
 	log "github.com/kdrkrgz/go-url-shortener/pkg/logger"
 	"github.com/kdrkrgz/go-url-shortener/repository"
 )
 
 func RunTasks() {
-	expiredUrlsDeleteHour := conf.Get("Tasks.ExpiredUrlsDeleteHour")
+	expiredUrlsDeleteHour := os.Getenv("ExpiredUrlsDeleteHour")
 	repo := repository.New()
 	s := gocron.NewScheduler(time.UTC)
 	//tasks

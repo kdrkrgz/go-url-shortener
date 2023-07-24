@@ -2,10 +2,10 @@ package shortener
 
 import (
 	"math/rand"
+	"os"
 	"strconv"
 	"time"
 
-	"github.com/kdrkrgz/go-url-shortener/conf"
 	log "github.com/kdrkrgz/go-url-shortener/pkg/logger"
 	"github.com/skip2/go-qrcode"
 )
@@ -19,8 +19,8 @@ type Response struct {
 	QrCode   []byte `json:"qr_code"`
 }
 
-var shortUrlMinLen = conf.Get("App.ShortUrlMinLen")
-var shortUrlMaxLen = conf.Get("App.ShortUrlMaxLen")
+var shortUrlMinLen = os.Getenv("ShortUrlMinLen")
+var shortUrlMaxLen = os.Getenv("ShortUrlMaxLen")
 
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 

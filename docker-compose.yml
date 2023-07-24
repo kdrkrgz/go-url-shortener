@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+  api:
+    image: kdrkrgz/go-url-shortener:latest
+    build: .
+    environment:
+      AppPort: 8080
+      Domain: http://localhost:8080
+      UrlExpirationTime: 1440
+      CacheUrlExpiration: 60 
+      ShortUrlMinLen: 4
+      ShortUrlMaxLen: 8
+      ExpiredUrlsDeleteHour: 00:00
+      DbUri: mongodb://localhost
+      DbPort: 27017
+      DbName: UrlShortener
+      CollectionName: Urls
+      RedisHost: localhost
+      RedisPort: 6379
+      RedisDb: 0
+    depends_on:
+      - mongo
+      - redis
+
+  mongo:
+    image: mongo
+    restart: always   
+
+  redis:
+    image: redis:latest
+    restart: always   
