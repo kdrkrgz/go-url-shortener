@@ -9,6 +9,7 @@ import (
 	swagger "github.com/arsmn/fiber-swagger/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/kdrkrgz/go-url-shortener/conf"
 	handler "github.com/kdrkrgz/go-url-shortener/handler"
 	log "github.com/kdrkrgz/go-url-shortener/pkg/logger"
 	tasks "github.com/kdrkrgz/go-url-shortener/pkg/tasks"
@@ -17,7 +18,7 @@ import (
 
 type Application struct {
 	app  *fiber.App
-	repo *repository.Repository
+	repo *repository.AppRepository
 }
 
 func (a *Application) Register() {
@@ -37,7 +38,15 @@ func (a *Application) Register() {
 // @schemes					    http
 // @license.name				Apache License, Version 2.0 (the "License")
 func main() {
-	repo := repository.New()
+	conf.LoadEnv()
+
+	dbRepo := repository.NewMongoRepository()
+	cacheRepo := repository.NewRedisRepository()
+
+	repo := &repository.AppRepository{
+		DbRepository:    dbRepo,
+		CacheRepository: cacheRepo,
+	}
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     "http://localhost:8000",
@@ -48,7 +57,7 @@ func main() {
 	// app.Use(limiter.New(limiter.Config{Max: 2, Expiration: 1 * time.Minute}))
 	application := &Application{app: app, repo: repo}
 	application.Register()
-	tasks.RunTasks()
+	tasks.RunTasks(dbRepo)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT)

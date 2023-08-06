@@ -32,3 +32,25 @@ func init() {
 func Logger() *zap.Logger {
 	return logger
 }
+
+// Input: nums = [2,7,11,15], target = 9
+// Output: [0,1]
+// Explanation: Because nums[0] + nums[1] == 9, we return [0, 1].
+func twoSum(nums []int, target int) []int {
+	nmap := map[int]int{}
+	n := len(nums)
+
+	for i := 0; i < n; i++ {
+		nmap[nums[i]] = i
+	}
+
+	for i := 0; i < n; i++ {
+		complement := target - nums[i]
+		for k, _ := range nmap {
+			if k == complement && nmap[complement] != i {
+				return []int{i, nmap[complement]}
+			}
+		}
+	}
+	return []int{}
+}

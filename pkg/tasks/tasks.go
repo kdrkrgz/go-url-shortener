@@ -6,16 +6,15 @@ import (
 
 	"github.com/go-co-op/gocron"
 	log "github.com/kdrkrgz/go-url-shortener/pkg/logger"
-	"github.com/kdrkrgz/go-url-shortener/repository"
+	"github.com/kdrkrgz/go-url-shortener/resolver"
 )
 
-func RunTasks() {
+func RunTasks(repo resolver.DbRepository) {
 	expiredUrlsDeleteHour := os.Getenv("ExpiredUrlsDeleteHour")
-	repo := repository.New()
 	s := gocron.NewScheduler(time.UTC)
 	//tasks
 	_, err := s.Every(1).Day().At(expiredUrlsDeleteHour).Do(func() {
-		DeleteExpiredUrls(repo)
+		DeleteExpiredUrlsFromDb(repo)
 	})
 
 	if err != nil {
@@ -24,8 +23,8 @@ func RunTasks() {
 	s.StartAsync()
 }
 
-func DeleteExpiredUrls(repo *repository.Repository) error {
-	deletedUrlsCount, err := repo.DeleteShortedUrlsByDate()
+func DeleteExpiredUrlsFromDb(repo resolver.DbRepository) error {
+	deletedUrlsCount, err := repo.DeleteUrlsByDate()
 	if err != nil {
 		return err
 	}

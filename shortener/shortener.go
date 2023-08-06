@@ -19,9 +19,6 @@ type Response struct {
 	QrCode   []byte `json:"qr_code"`
 }
 
-var shortUrlMinLen = os.Getenv("ShortUrlMinLen")
-var shortUrlMaxLen = os.Getenv("ShortUrlMaxLen")
-
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -32,11 +29,11 @@ var randomInt = func(min, max int) int {
 }
 
 func getMinAndMaxLen() (int, int) {
-	min, err := strconv.Atoi(shortUrlMinLen)
+	min, err := strconv.Atoi(os.Getenv("ShortUrlMinLen"))
 	if err != nil {
 		panic(err)
 	}
-	max, err := strconv.Atoi(shortUrlMaxLen)
+	max, err := strconv.Atoi(os.Getenv("ShortUrlMaxLen"))
 	if err != nil {
 		panic(err)
 	}

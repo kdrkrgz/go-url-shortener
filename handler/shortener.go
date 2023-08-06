@@ -8,24 +8,29 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kdrkrgz/go-url-shortener/repository"
 	"github.com/kdrkrgz/go-url-shortener/resolver"
+	"github.com/kdrkrgz/go-url-shortener/service"
 	"github.com/kdrkrgz/go-url-shortener/shortener"
 )
 
 // Shortener godoc
 //
 //	@Router		/shortener/ [POST]
-func ShortenerHandler(repo *repository.Repository) fiber.Handler {
+func ShortenerHandler(repo *repository.AppRepository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// target url
 		var payload *shortener.Request
 		var shorted resolver.ShortUrl
+		service := &service.UrlService{
+			DbRepository:    repo.DbRepository,
+			CacheRepository: repo.CacheRepository,
+		}
 		if err := c.BodyParser(&payload); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"message": "Bad Request",
 			})
 		}
 		// check if target url is already shorted
-		shortedUrl, _ := repo.FindUrl("target_url", payload.TargetUrl)
+		shortedUrl, _ := service.FindShortUrl(payload.TargetUrl)
 		if shortedUrl != nil {
 			return c.Status(fiber.StatusCreated).JSON(&shortener.Response{
 				ShortUrl: *shortedUrl,
@@ -41,8 +46,7 @@ func ShortenerHandler(repo *repository.Repository) fiber.Handler {
 			CreatedAt:      time.Now(),
 		}
 		// insert to db
-		_, errInsert := repo.InsertShortedUrl(shorted)
-		if errInsert != nil {
+		if err := service.InsertUrl(shorted); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": "Something went wrong!",
 			})

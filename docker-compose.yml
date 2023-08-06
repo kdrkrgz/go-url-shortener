@@ -7,6 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
+      Mode: Production
       AppPort: 8080
       Domain: http://0.0.0.0:8080
       UrlExpirationTime: 1440
