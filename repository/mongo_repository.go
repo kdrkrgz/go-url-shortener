@@ -22,7 +22,7 @@ func NewMongoRepository() *MongoRepository {
 		UrlCollection: getUrlCollection(os.Getenv("DbName"), os.Getenv("CollectionName")),
 	}
 	// create unique index for shorted url
-	col.UrlCollection.Indexes().CreateOne(context.Background(), mongo.IndexModel{
+	col.UrlCollection.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
 		Keys: bson.M{
 			"short_url": 1,
 		},
@@ -73,4 +73,9 @@ func (repo *MongoRepository) DeleteUrlsByDate() (*mongo.DeleteResult, error) {
 		return nil, err
 	}
 	return res, nil
+}
+
+func (repo *MongoRepository) DropCollection() {
+	repo.UrlCollection.DeleteMany(context.Background(), bson.M{})
+
 }

@@ -56,3 +56,12 @@ func (repo *RedisRepository) InsertTargetUrl(targetUrl resolver.ShortUrl) error 
 
 	return nil
 }
+
+func (repo *RedisRepository) FlushAll() error {
+	if err := repo.RedisClient.FlushAll().Err(); err != nil {
+		err = fmt.Errorf("an error occured flush all - Error: %v", err)
+		return err
+	}
+
+	return nil
+}
