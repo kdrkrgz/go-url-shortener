@@ -33,7 +33,8 @@ func NewMongoRepository() *MongoRepository {
 
 func getUrlCollection(db, collection string) *mongo.Collection {
 	fmt.Println("Connecting to MongoDB...")
-	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(fmt.Sprintf("%s:%s", os.Getenv("DbUri"), os.Getenv("DbPort"))))
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(fmt.Sprintf("%s:%s", os.Getenv("DbUri"), os.Getenv("DbPort"))))
 	if err != nil {
 		panic(err)
 	}
