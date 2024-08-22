@@ -20,7 +20,7 @@ func ShortenerHandler(repo *repository.AppRepository) fiber.Handler {
 		// target url
 		var payload *shortener.Request
 		var shorted resolver.ShortUrl
-		service := &service.UrlService{
+		svc := &service.UrlService{
 			DbRepository:    repo.DbRepository,
 			CacheRepository: repo.CacheRepository,
 		}
@@ -30,7 +30,7 @@ func ShortenerHandler(repo *repository.AppRepository) fiber.Handler {
 			})
 		}
 		// check if target url is already shorted
-		shortedUrl, _ := service.FindShortUrl(payload.TargetUrl)
+		shortedUrl, _ := svc.FindShortUrl(payload.TargetUrl)
 		if shortedUrl != nil {
 			return c.Status(fiber.StatusCreated).JSON(&shortener.Response{
 				ShortUrl: *shortedUrl,
@@ -46,7 +46,7 @@ func ShortenerHandler(repo *repository.AppRepository) fiber.Handler {
 			CreatedAt:      time.Now(),
 		}
 		// insert to db
-		if err := service.InsertUrl(shorted); err != nil {
+		if err := svc.InsertUrl(shorted); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": "Something went wrong!",
 			})

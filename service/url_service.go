@@ -23,7 +23,7 @@ func (service *UrlService) InsertUrl(shortedUrl resolver.ShortUrl) error {
 		log.Logger().Sugar().Errorf("An error occured insert url to db - Error: %v", err)
 		return err
 	}
-	if err := service.CacheRepository.InsertShortUrl(shortedUrl); err != nil {
+	if err := service.CacheRepository.InsertTargetUrl(shortedUrl); err != nil {
 		log.Logger().Sugar().Errorf("An error occured insert url to redis - Error: %v", err)
 		return err
 	}
@@ -39,13 +39,13 @@ func (service *UrlService) FindTargetUrl(url string) (*string, error) {
 	if resFromCache != nil {
 		return resFromCache, nil
 	}
-	resFromDb, err := service.DbRepository.FindUrl("short_url", url)
+	shortUrl, err := service.DbRepository.FindUrl("short_url", url)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("resFromDb: ", resFromDb.TargetUrl)
-	service.CacheRepository.InsertTargetUrl(*resFromDb)
-	return &resFromDb.TargetUrl, nil
+	fmt.Println("resFromDb: ", shortUrl.TargetUrl)
+	service.CacheRepository.InsertShortUrl(*shortUrl)
+	return &shortUrl.TargetUrl, nil
 }
 
 func (service *UrlService) FindShortUrl(url string) (*string, error) {
@@ -62,5 +62,7 @@ func (service *UrlService) FindShortUrl(url string) (*string, error) {
 		return nil, err
 	}
 	fmt.Println("resFromDb: ", resFromDb.TargetUrl)
+	// request to db for this url exists Bloom Filter coming here
+	service.CacheRepository.InsertTargetUrl(*resFromDb)
 	return &resFromDb.ShortUrl, nil
 }
